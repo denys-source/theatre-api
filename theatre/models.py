@@ -19,11 +19,15 @@ class Actor(models.Model):
     first_name = models.CharField(max_length=63)
     last_name = models.CharField(max_length=63)
 
+    @property
+    def full_name(self) -> str:
+        return f"{self.first_name} {self.last_name}"
+
     class Meta:
         ordering = ("first_name",)
 
     def __str__(self) -> str:
-        return f"{self.first_name} {self.last_name}"
+        return self.full_name
 
 
 class Genre(models.Model):
@@ -56,6 +60,10 @@ class Play(models.Model):
     description = models.TextField()
     actors = models.ManyToManyField(Actor, related_name="plays")
     genres = models.ManyToManyField(Genre, related_name="plays")
+
+    @property
+    def description_preview(self) -> str:
+        return self.description[:80] + "..."
 
     class Meta:
         ordering = ("title",)
