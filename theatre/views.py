@@ -93,7 +93,7 @@ class ReservationViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
     serializer_class = ReservationSerializer
 
     def get_queryset(self) -> QuerySet[Reservation]:
-        queryset = self.queryset
+        queryset = self.queryset.filter(user=self.request.user)
 
         if self.action == "list":
             queryset = queryset.prefetch_related(
