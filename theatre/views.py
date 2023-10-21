@@ -40,6 +40,14 @@ class PlayViewSet(ModelViewSet):
     queryset = Play.objects.all()
     serializer_class = PlaySerializer
 
+    def get_queryset(self) -> QuerySet[Play]:
+        queryset = self.queryset
+
+        if self.action in ("list", "retrieve"):
+            queryset = queryset.prefetch_related("actors", "genres")
+
+        return queryset
+
     def get_serializer_class(self) -> type[BaseSerializer]:
         if self.action == "list":
             return PlayListSerializer
@@ -59,6 +67,9 @@ class PerformanceViewSet(ModelViewSet):
 
     def get_queryset(self) -> QuerySet[Performance]:
         queryset = self.queryset
+
+        if self.action in ("list", "retrieve"):
+            queryset = queryset.select_related("play", "theatre_hall")
 
         if self.action == "list":
             queryset = queryset.annotate(
@@ -80,6 +91,17 @@ class PerformanceViewSet(ModelViewSet):
 class ReservationViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
     queryset = Reservation.objects.all()
     serializer_class = ReservationSerializer
+
+    def get_queryset(self) -> QuerySet[Reservation]:
+        queryset = self.queryset
+
+        if self.action == "list":
+            queryset = queryset.prefetch_related(
+                "tickets__performance__play",
+                "tickets__performance__theatre_hall",
+            )
+
+        return queryset
 
     def get_serializer_class(self) -> type[BaseSerializer]:
         if self.action == "list":
