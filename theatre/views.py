@@ -1,3 +1,4 @@
+from django.db.models import F, Count, QuerySet
 from rest_framework.mixins import CreateModelMixin, ListModelMixin
 from rest_framework.serializers import BaseSerializer
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
@@ -55,6 +56,18 @@ class TheatreHallViewSet(ModelViewSet):
 class PerformanceViewSet(ModelViewSet):
     queryset = Performance.objects.all()
     serializer_class = PerformanceSerializer
+
+    def get_queryset(self) -> QuerySet[Performance]:
+        queryset = self.queryset
+
+        if self.action == "list":
+            queryset = queryset.annotate(
+                available_tickets=F("theatre_hall__rows")
+                * F("theatre_hall__seats_in_row")
+                - Count("tickets")
+            )
+
+        return queryset
 
     def get_serializer_class(self) -> type[BaseSerializer]:
         if self.action == "list":
