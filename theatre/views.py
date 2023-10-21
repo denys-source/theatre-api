@@ -1,7 +1,15 @@
+from rest_framework.mixins import CreateModelMixin, ListModelMixin
 from rest_framework.serializers import BaseSerializer
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
-from theatre.models import Actor, Genre, Performance, Play, TheatreHall
+from theatre.models import (
+    Actor,
+    Genre,
+    Performance,
+    Play,
+    Reservation,
+    TheatreHall,
+)
 from theatre.serializers import (
     ActorSerializer,
     GenreSerializer,
@@ -11,6 +19,8 @@ from theatre.serializers import (
     PlayDetailSerializer,
     PlayListSerializer,
     PlaySerializer,
+    ReservationListSerializer,
+    ReservationSerializer,
     TheatreHallSerializer,
 )
 
@@ -52,3 +62,16 @@ class PerformanceViewSet(ModelViewSet):
         elif self.action == "retrieve":
             return PerformanceDetailSerializer
         return self.serializer_class
+
+
+class ReservationViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
+    queryset = Reservation.objects.all()
+    serializer_class = ReservationSerializer
+
+    def get_serializer_class(self) -> type[BaseSerializer]:
+        if self.action == "list":
+            return ReservationListSerializer
+        return self.serializer_class
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

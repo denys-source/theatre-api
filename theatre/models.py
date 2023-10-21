@@ -102,14 +102,14 @@ class Ticket(models.Model):
     def validate_ticket(
         row: int,
         seat: int,
-        performance: Performance,
+        theatre_hall: TheatreHall,
         exc_to_raise: type[Exception],
     ) -> None:
-        for attr_name, attr_value, performance_attr_name in (
+        for attr_name, attr_value, theatre_hall_attr_name in (
             ("row", row, "rows"),
             ("seat", seat, "seats_in_row"),
         ):
-            max_value = getattr(performance, performance_attr_name)
+            max_value = getattr(theatre_hall, theatre_hall_attr_name)
             if not attr_value <= max_value:
                 raise exc_to_raise(
                     f"{attr_name} must be in range [1, {max_value}]"
@@ -117,7 +117,7 @@ class Ticket(models.Model):
 
     def clean(self) -> None:
         self.validate_ticket(
-            self.row, self.seat, self.performance, ValidationError
+            self.row, self.seat, self.performance.theatre_hall, ValidationError
         )
 
     def save(self, *args, **kwargs) -> None:

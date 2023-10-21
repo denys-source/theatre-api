@@ -1,6 +1,18 @@
+from typing import Any
+
+from django.db import transaction
+
 from rest_framework import serializers
 
-from theatre.models import Actor, Genre, Performance, Play, TheatreHall
+from theatre.models import (
+    Actor,
+    Genre,
+    Performance,
+    Play,
+    Reservation,
+    TheatreHall,
+    Ticket,
+)
 
 
 class ActorSerializer(serializers.ModelSerializer):
@@ -76,3 +88,53 @@ class PerformanceDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Performance
         fields = ("id", "play", "theatre_hall", "show_time")
+
+
+class TicketSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ticket
+        fields = ("id", "row", "seat", "performance")
+
+    def validate(self, attrs: Any) -> Any:
+        data = super().validate(attrs)
+        self.Meta.model.validate_ticket(
+            attrs["row"],
+            attrs["seat"],
+            attrs["performance"].theatre_hall,
+            serializers.ValidationError,
+        )
+        return data
+
+
+class TicketListSerializer(serializers.ModelSerializer):
+    performance = PerformanceListSerializer(read_only=True)
+
+    class Meta:
+        model = Ticket
+        fields = ("id", "row", "seat", "performance")
+
+
+class ReservationSerializer(serializers.ModelSerializer):
+    tickets = TicketSerializer(many=True, allow_empty=False)
+
+    class Meta:
+        model = Reservation
+        fields = ("id", "created_at", "tickets")
+
+    def create(self, validated_data: Any) -> Reservation:
+        with transaction.atomic():
+            tickets_data = validated_data.pop("tickets")
+            reservation = super().create(validated_data)
+
+            for ticket_data in tickets_data:
+                Ticket.objects.create(reservation=reservation, **ticket_data)
+
+            return reservation
+
+
+class ReservationListSerializer(serializers.ModelSerializer):
+    tickets = TicketListSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Reservation
+        fields = ("id", "created_at", "tickets")
