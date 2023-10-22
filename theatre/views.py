@@ -1,3 +1,4 @@
+import re
 from django.db.models import F, Count, QuerySet
 from rest_framework.mixins import CreateModelMixin, ListModelMixin
 from rest_framework.permissions import IsAuthenticated
@@ -45,13 +46,32 @@ class PlayViewSet(ModelViewSet):
     serializer_class = PlaySerializer
     permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
+    @staticmethod
+    def _params_to_ints(params: str) -> list[int]:
+        return [
+            int(object_id)
+            for object_id in params.split(",")
+            if object_id.isnumeric()
+        ]
+
     def get_queryset(self) -> QuerySet[Play]:
         queryset = self.queryset
+
+        if title := self.request.query_params.get("title"):
+            queryset = queryset.filter(title__icontains=title)
+
+        if actor_params := self.request.query_params.get("actors"):
+            actor_ids = self._params_to_ints(actor_params)
+            queryset = queryset.filter(actors__id__in=actor_ids)
+
+        if genre_params := self.request.query_params.get("genres"):
+            genre_ids = self._params_to_ints(genre_params)
+            queryset = queryset.filter(genres__id__in=genre_ids)
 
         if self.action in ("list", "retrieve"):
             queryset = queryset.prefetch_related("actors", "genres")
 
-        return queryset
+        return queryset.distinct()
 
     def get_serializer_class(self) -> type[BaseSerializer]:
         if self.action == "list":
@@ -75,6 +95,18 @@ class PerformanceViewSet(ModelViewSet):
     def get_queryset(self) -> QuerySet[Performance]:
         queryset = self.queryset
 
+        if (
+            date_str := self.request.query_params.get("date")
+        ) and re.fullmatch(
+            r"^\d{4}\-(0?[1-9]|1[012])\-(0?[1-9]|[12][0-9]|3[01])$", date_str
+        ):
+            queryset = queryset.filter(show_time__date=date_str)
+
+        if (
+            play_id := self.request.query_params.get("play")
+        ) and play_id.isnumeric():
+            queryset = queryset.filter(play_id=play_id)
+
         if self.action in ("list", "retrieve"):
             queryset = queryset.select_related("play", "theatre_hall")
 
@@ -85,7 +117,7 @@ class PerformanceViewSet(ModelViewSet):
                 - Count("tickets")
             )
 
-        return queryset
+        return queryset.distinct()
 
     def get_serializer_class(self) -> type[BaseSerializer]:
         if self.action == "list":
