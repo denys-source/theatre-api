@@ -1,5 +1,6 @@
 from django.db.models import F, Count, QuerySet
 from rest_framework.mixins import CreateModelMixin, ListModelMixin
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.serializers import BaseSerializer
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
@@ -11,6 +12,7 @@ from theatre.models import (
     Reservation,
     TheatreHall,
 )
+from theatre.permissions import IsAdminOrIfAuthenticatedReadOnly
 from theatre.serializers import (
     ActorSerializer,
     GenreSerializer,
@@ -29,16 +31,19 @@ from theatre.serializers import (
 class ActorViewSet(ModelViewSet):
     queryset = Actor.objects.all()
     serializer_class = ActorSerializer
+    permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
 
 class GenreViewSet(ModelViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
+    permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
 
 class PlayViewSet(ModelViewSet):
     queryset = Play.objects.all()
     serializer_class = PlaySerializer
+    permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
     def get_queryset(self) -> QuerySet[Play]:
         queryset = self.queryset
@@ -59,11 +64,13 @@ class PlayViewSet(ModelViewSet):
 class TheatreHallViewSet(ModelViewSet):
     queryset = TheatreHall.objects.all()
     serializer_class = TheatreHallSerializer
+    permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
 
 class PerformanceViewSet(ModelViewSet):
     queryset = Performance.objects.all()
     serializer_class = PerformanceSerializer
+    permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
     def get_queryset(self) -> QuerySet[Performance]:
         queryset = self.queryset
@@ -91,6 +98,7 @@ class PerformanceViewSet(ModelViewSet):
 class ReservationViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
     queryset = Reservation.objects.all()
     serializer_class = ReservationSerializer
+    permission_classes = (IsAuthenticated,)
 
     def get_queryset(self) -> QuerySet[Reservation]:
         queryset = self.queryset.filter(user=self.request.user)
