@@ -1,7 +1,11 @@
 import re
+from typing import Any
 from django.db.models import F, Count, QuerySet
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.mixins import CreateModelMixin, ListModelMixin
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request
+from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 
@@ -80,6 +84,28 @@ class PlayViewSet(ModelViewSet):
             return PlayDetailSerializer
         return self.serializer_class
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "title",
+                description="Filter plays by title",
+                type={"type": "string"},
+            ),
+            OpenApiParameter(
+                "genres",
+                description="Filter plays by genres. Example: ?genres=1,2",
+                type={"type": "list", "items": {"type": "number"}},
+            ),
+            OpenApiParameter(
+                "actors",
+                description="Filter plays by actors. Example: ?actors=1,2",
+                type={"type": "list", "items": {"type": "number"}},
+            ),
+        ]
+    )
+    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return super().list(request, *args, **kwargs)
+
 
 class TheatreHallViewSet(ModelViewSet):
     queryset = TheatreHall.objects.all()
@@ -125,6 +151,23 @@ class PerformanceViewSet(ModelViewSet):
         elif self.action == "retrieve":
             return PerformanceDetailSerializer
         return self.serializer_class
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "date",
+                description="Filter performances by date in the format yyyy-mm-dd. Example: ?date=2023-01-01",
+                type={"type": "date"},
+            ),
+            OpenApiParameter(
+                "play",
+                description="Filter performances by play id",
+                type={"type": "number"},
+            ),
+        ]
+    )
+    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return super().list(request, *args, **kwargs)
 
 
 class ReservationViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
