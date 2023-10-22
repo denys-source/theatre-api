@@ -2,12 +2,15 @@ import re
 from typing import Any
 from django.db.models import F, Count, QuerySet
 from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework.generics import get_object_or_404
 from rest_framework.mixins import CreateModelMixin, ListModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
+from rest_framework_simplejwt.views import status
+from rest_framework.decorators import action
 
 from theatre.models import (
     Actor,
@@ -25,6 +28,7 @@ from theatre.serializers import (
     PerformanceListSerializer,
     PerformanceSerializer,
     PlayDetailSerializer,
+    PlayImageSerializer,
     PlayListSerializer,
     PlaySerializer,
     ReservationListSerializer,
@@ -82,6 +86,8 @@ class PlayViewSet(ModelViewSet):
             return PlayListSerializer
         elif self.action == "retrieve":
             return PlayDetailSerializer
+        elif self.action == "upload_image":
+            return PlayImageSerializer
         return self.serializer_class
 
     @extend_schema(
@@ -105,6 +111,14 @@ class PlayViewSet(ModelViewSet):
     )
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return super().list(request, *args, **kwargs)
+
+    @action(methods=["POST"], detail=True, url_path="upload-image")
+    def upload_image(self, request: Request, pk=None) -> Response:
+        play = get_object_or_404(Play, pk=pk)
+        serializer = self.get_serializer(play, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class TheatreHallViewSet(ModelViewSet):
