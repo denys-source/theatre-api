@@ -170,7 +170,10 @@ class PerformanceViewSet(ModelViewSet):
         parameters=[
             OpenApiParameter(
                 "date",
-                description="Filter performances by date in the format yyyy-mm-dd. Example: ?date=2023-01-01",
+                description=(
+                    "Filter performances by date in the format "
+                    "yyyy-mm-dd. Example: ?date=2023-01-01"
+                ),
                 type={"type": "date"},
             ),
             OpenApiParameter(
