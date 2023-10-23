@@ -4,7 +4,7 @@ from django.db.models import F, Count, QuerySet
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.generics import get_object_or_404
 from rest_framework.mixins import CreateModelMixin, ListModelMixin
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
@@ -20,7 +20,7 @@ from theatre.models import (
     Reservation,
     TheatreHall,
 )
-from theatre.permissions import IsAdminOrIfAuthenticatedReadOnly
+from theatre.permissions import IsAdminOrIfAuthenticatedReadOnly, ReadOnly
 from theatre.serializers import (
     ActorSerializer,
     GenreSerializer,
@@ -40,19 +40,19 @@ from theatre.serializers import (
 class ActorViewSet(ModelViewSet):
     queryset = Actor.objects.all()
     serializer_class = ActorSerializer
-    permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
+    permission_classes = (IsAdminUser,)
 
 
 class GenreViewSet(ModelViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
+    permission_classes = (IsAdminUser,)
 
 
 class PlayViewSet(ModelViewSet):
     queryset = Play.objects.all()
     serializer_class = PlaySerializer
-    permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
+    permission_classes = (IsAdminUser|ReadOnly,)
 
     @staticmethod
     def _params_to_ints(params: str) -> list[int]:
@@ -130,7 +130,7 @@ class TheatreHallViewSet(ModelViewSet):
 class PerformanceViewSet(ModelViewSet):
     queryset = Performance.objects.all()
     serializer_class = PerformanceSerializer
-    permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
+    permission_classes = (IsAdminUser|ReadOnly,)
 
     def get_queryset(self) -> QuerySet[Performance]:
         queryset = self.queryset

@@ -8,3 +8,8 @@ class IsAdminOrIfAuthenticatedReadOnly(BasePermission):
             and request.user.is_authenticated
             and (request.method in SAFE_METHODS or request.user.is_staff)
         )
+
+
+class ReadOnly(BasePermission):
+    def has_permission(self, request, view):
+        return request.method in SAFE_METHODS
