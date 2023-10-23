@@ -1,14 +1,19 @@
 import re
 from typing import Any
+from collections import OrderedDict
+
 from django.db.models import F, Count, QuerySet
+from django.urls import NoReverseMatch
 from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework import views
+from rest_framework import viewsets
+from rest_framework.reverse import reverse
 from rest_framework.generics import get_object_or_404
 from rest_framework.mixins import CreateModelMixin, ListModelMixin
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer
-from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from rest_framework_simplejwt.views import status
 from rest_framework.decorators import action
 
@@ -35,24 +40,25 @@ from theatre.serializers import (
     ReservationSerializer,
     TheatreHallSerializer,
 )
+from theatre import urls
 
 
-class ActorViewSet(ModelViewSet):
+class ActorViewSet(viewsets.ModelViewSet):
     queryset = Actor.objects.all()
     serializer_class = ActorSerializer
     permission_classes = (IsAdminUser,)
 
 
-class GenreViewSet(ModelViewSet):
+class GenreViewSet(viewsets.ModelViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     permission_classes = (IsAdminUser,)
 
 
-class PlayViewSet(ModelViewSet):
+class PlayViewSet(viewsets.ModelViewSet):
     queryset = Play.objects.all()
     serializer_class = PlaySerializer
-    permission_classes = (IsAdminUser|ReadOnly,)
+    permission_classes = (IsAdminUser | ReadOnly,)
 
     @staticmethod
     def _params_to_ints(params: str) -> list[int]:
@@ -121,16 +127,16 @@ class PlayViewSet(ModelViewSet):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class TheatreHallViewSet(ModelViewSet):
+class TheatreHallViewSet(viewsets.ModelViewSet):
     queryset = TheatreHall.objects.all()
     serializer_class = TheatreHallSerializer
     permission_classes = (IsAdminOrIfAuthenticatedReadOnly,)
 
 
-class PerformanceViewSet(ModelViewSet):
+class PerformanceViewSet(viewsets.ModelViewSet):
     queryset = Performance.objects.all()
     serializer_class = PerformanceSerializer
-    permission_classes = (IsAdminUser|ReadOnly,)
+    permission_classes = (IsAdminUser | ReadOnly,)
 
     def get_queryset(self) -> QuerySet[Performance]:
         queryset = self.queryset
@@ -187,7 +193,9 @@ class PerformanceViewSet(ModelViewSet):
         return super().list(request, *args, **kwargs)
 
 
-class ReservationViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
+class ReservationViewSet(
+    ListModelMixin, CreateModelMixin, viewsets.GenericViewSet
+):
     queryset = Reservation.objects.all()
     serializer_class = ReservationSerializer
     permission_classes = (IsAuthenticated,)
@@ -210,3 +218,42 @@ class ReservationViewSet(ListModelMixin, CreateModelMixin, GenericViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+class APIRootView(views.APIView):
+    """
+    The custom basic root view that filters endpoints based on permissions current user has
+    """
+
+    _ignore_model_permissions = True
+    schema = None
+
+    def get(self, request, *args, **kwargs):
+        ret = OrderedDict()
+        namespace = request.resolver_match.namespace
+        for key, url_name in self.get_api_root_dict(request).items():
+            if namespace:
+                url_name = namespace + ":" + url_name
+            try:
+                ret[key] = reverse(
+                    url_name,
+                    args=args,
+                    kwargs=kwargs,
+                    request=request,
+                    format=kwargs.get("format"),
+                )
+            except NoReverseMatch:
+                continue
+
+        return Response(ret)
+
+    def get_api_root_dict(self, request):
+        api_root_dict = OrderedDict()
+        list_name = urls.router.routes[0].name
+        for prefix, viewset, basename in urls.router.registry:
+            for permission_class in viewset.permission_classes:
+                if not permission_class().has_permission(request, viewset):
+                    break
+            else:
+                api_root_dict[prefix] = list_name.format(basename=basename)
+        return api_root_dict

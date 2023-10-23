@@ -1,6 +1,6 @@
 from django.urls import include, path
-from rest_framework.routers import DefaultRouter
 
+from theatre.routers import Router
 from theatre.views import (
     ActorViewSet,
     GenreViewSet,
@@ -11,7 +11,7 @@ from theatre.views import (
 )
 
 
-router = DefaultRouter()
+router = Router()
 router.register("actors", ActorViewSet)
 router.register("genres", GenreViewSet)
 router.register("plays", PlayViewSet)
