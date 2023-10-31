@@ -31,7 +31,7 @@ python manage.py runserver
 
 Docker should be installed
 ```shell
-docker compose run --build
+docker-compose up --build
 ```
 
 ## Getting access
